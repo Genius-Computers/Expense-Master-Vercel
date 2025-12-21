@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - منصة حاسبة التمويل</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center">
+    <div class="container mx-auto px-4">
+        <div class="max-w-md mx-auto">
+            <!-- Logo and Title -->
+            <div class="text-center mb-8">
+                <i class="fas fa-calculator text-6xl text-blue-600 mb-4"></i>
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">منصة حاسبة التمويل</h1>
+                <p class="text-gray-600">قم بتسجيل الدخول للوصول إلى لوحة التحكم</p>
+            </div>
+
+            <!-- Login Form -->
+            <div class="bg-white rounded-2xl shadow-2xl p-8">
+                <form id="loginForm" class="space-y-6">
+                    <!-- Username -->
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">
+                            <i class="fas fa-user ml-2"></i>
+                            اسم المستخدم
+                        </label>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="أدخل اسم المستخدم"
+                            required
+                        >
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">
+                            <i class="fas fa-lock ml-2"></i>
+                            كلمة المرور
+                        </label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="أدخل كلمة المرور"
+                            required
+                        >
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                        <i class="fas fa-exclamation-circle ml-2"></i>
+                        <span id="errorText"></span>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button 
+                        type="submit" 
+                        id="loginButton"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300"
+                    >
+                        <i class="fas fa-sign-in-alt ml-2"></i>
+                        تسجيل الدخول
+                    </button>
+                </form>
+
+                <!-- Demo Accounts -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <p class="text-sm text-gray-600 font-bold mb-2">حسابات تجريبية:</p>
+                    <div class="text-xs text-gray-600 space-y-1">
+                        <p><strong>مدير عام:</strong> superadmin / SuperAdmin@2025</p>
+                        <p><strong>مدير:</strong> admin / Admin@2025</p>
+                        <p><strong>موظف:</strong> admin1 / Admin1@2025</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-8 text-gray-600">
+                <a href="/" class="hover:text-blue-600 transition duration-300">
+                    <i class="fas fa-home ml-1"></i>
+                    العودة للصفحة الرئيسية
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const loginButton = document.getElementById('loginButton');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Hide previous errors
+            errorMessage.classList.add('hidden');
+            loginButton.disabled = true;
+            loginButton.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تسجيل الدخول...';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Save token and user data
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Redirect based on role
+                    if (data.user.role === 'superadmin') {
+                        window.location.href = '/admin/panel';
+                    } else {
+                        window.location.href = `/admin/requests?tenant_id=${data.user.tenant_id}`;
+                    }
+                } else {
+                    throw new Error(data.error || 'فشل تسجيل الدخول');
+                }
+            } catch (error) {
+                errorText.textContent = error.message;
+                errorMessage.classList.remove('hidden');
+                loginButton.disabled = false;
+                loginButton.innerHTML = '<i class="fas fa-sign-in-alt ml-2"></i> تسجيل الدخول';
+            }
+        });
+    </script>
+</body>
+</html>
