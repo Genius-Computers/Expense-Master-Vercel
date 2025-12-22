@@ -20,6 +20,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: 'اسم المستخدم وكلمة المرور مطلوبة' });
     }
 
+    // Check if DATABASE_URL is set
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'DATABASE_URL environment variable is not set. Please configure it in Vercel project settings.' 
+      });
+    }
+
     const db = getDb();
     const users = await db`
       SELECT * FROM users 

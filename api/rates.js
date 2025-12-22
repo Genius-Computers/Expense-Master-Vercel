@@ -10,21 +10,32 @@ export default async function handler(req, res) {
   });
 
   try {
-    const user = requireAuth(req);
-    const tenantId = req.query.tenant_id || user.tenant_id;
     const db = getDb();
+    const tenantId = req.query.tenant_id || null;
 
     if (req.method === 'GET') {
-      const rates = await db`
-        SELECT r.*, b.name as bank_name, ft.name as financing_type_name
-        FROM rates r
-        LEFT JOIN banks b ON r.bank_id = b.id
-        LEFT JOIN financing_types ft ON r.financing_type_id = ft.id
-        WHERE r.tenant_id = ${tenantId}
-        ORDER BY b.name, ft.name
-      `;
+      let rates;
+      if (tenantId) {
+        rates = await db`
+          SELECT r.*, b.name as bank_name, ft.name as financing_type_name
+          FROM rates r
+          LEFT JOIN banks b ON r.bank_id = b.id
+          LEFT JOIN financing_types ft ON r.financing_type_id = ft.id
+          WHERE r.tenant_id = ${tenantId}
+          ORDER BY b.name, ft.name
+        `;
+      } else {
+        // Public access - get all rates
+        rates = await db`
+          SELECT r.*, b.name as bank_name, ft.name as financing_type_name
+          FROM rates r
+          LEFT JOIN banks b ON r.bank_id = b.id
+          LEFT JOIN financing_types ft ON r.financing_type_id = ft.id
+          ORDER BY b.name, ft.name
+        `;
+      }
       
-      return res.json(rates);
+      return res.json({ success: true, data: rates });
     }
 
     if (req.method === 'POST') {

@@ -14,21 +14,33 @@ export default async function handler(req, res) {
   }
 
   try {
-    const user = requireAuth(req);
-    const tenantId = req.query.tenant_id || user.tenant_id;
-    
     const db = getDb();
-    const types = await db`
-      SELECT * FROM financing_types 
-      WHERE tenant_id = ${tenantId} AND is_active = true 
-      ORDER BY name
-    `;
+    const tenantId = req.query.tenant_id || null;
     
-    res.json(types);
-  } catch (error) {
-    if (error.message === 'UNAUTHORIZED') {
-      return res.status(401).json({ success: false, error: 'غير مصرح' });
+    let types;
+    if (tenantId) {
+      types = await db`
+        SELECT * FROM financing_types 
+        WHERE tenant_id = ${tenantId} AND is_active = true 
+        ORDER BY name
+      `;
+    } else {
+      // Public access - get all active types
+      types = await db`
+        SELECT * FROM financing_types 
+        WHERE is_active = true 
+        ORDER BY name
+      `;
     }
+    
+    // Map to expected format (type_name instead of name)
+    const formattedTypes = types.map(t => ({
+      ...t,
+      type_name: t.name
+    }));
+    
+    res.json({ success: true, data: formattedTypes });
+  } catch (error) {
     console.error('Error fetching financing types:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب أنواع التمويل' });
   }

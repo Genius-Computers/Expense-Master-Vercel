@@ -7,6 +7,14 @@
     {
       "source": "/login",
       "destination": "/login.html"
+    },
+    {
+      "source": "/calculator",
+      "destination": "/calculator.html"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/admin.html"
     }
   ]
 }

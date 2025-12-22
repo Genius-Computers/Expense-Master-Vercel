@@ -123,7 +123,7 @@
                     
                     // Redirect based on role
                     if (data.user.role === 'superadmin') {
-                        window.location.href = '/admin/panel';
+                        window.location.href = '/admin/dashboard';
                     } else {
                         window.location.href = `/admin/requests?tenant_id=${data.user.tenant_id}`;
                     }

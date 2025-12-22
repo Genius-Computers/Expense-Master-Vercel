@@ -14,21 +14,33 @@ export default async function handler(req, res) {
   }
 
   try {
-    const user = requireAuth(req);
-    const tenantId = req.query.tenant_id || user.tenant_id;
-    
     const db = getDb();
-    const banks = await db`
-      SELECT * FROM banks 
-      WHERE tenant_id = ${tenantId} AND is_active = true 
-      ORDER BY name
-    `;
+    const tenantId = req.query.tenant_id || null;
     
-    res.json(banks);
-  } catch (error) {
-    if (error.message === 'UNAUTHORIZED') {
-      return res.status(401).json({ success: false, error: 'غير مصرح' });
+    let banks;
+    if (tenantId) {
+      banks = await db`
+        SELECT * FROM banks 
+        WHERE tenant_id = ${tenantId} AND is_active = true 
+        ORDER BY name
+      `;
+    } else {
+      // Public access - get all active banks
+      banks = await db`
+        SELECT * FROM banks 
+        WHERE is_active = true 
+        ORDER BY name
+      `;
     }
+    
+    // Map to expected format (bank_name instead of name)
+    const formattedBanks = banks.map(b => ({
+      ...b,
+      bank_name: b.name
+    }));
+    
+    res.json({ success: true, data: formattedBanks });
+  } catch (error) {
     console.error('Error fetching banks:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب البنوك' });
   }

@@ -19,10 +19,20 @@ export default async function handler(req, res) {
     
     const db = getDb();
     const requests = await db`
-      SELECT fr.*, c.full_name as customer_name, c.phone as customer_phone, b.name as bank_name, u.full_name as employee_name
+      SELECT 
+        fr.*,
+        COALESCE(fr.requested_amount, fr.amount) as requested_amount,
+        COALESCE(fr.duration_months, fr.duration) as duration_months,
+        c.full_name as customer_name, 
+        c.phone as customer_phone, 
+        b.name as bank_name,
+        b.name as selected_bank_name,
+        ft.name as financing_type_name,
+        u.full_name as employee_name
       FROM financing_requests fr
       LEFT JOIN customers c ON fr.customer_id = c.id
-      LEFT JOIN banks b ON fr.bank_id = b.id
+      LEFT JOIN banks b ON COALESCE(fr.selected_bank_id, fr.bank_id) = b.id
+      LEFT JOIN financing_types ft ON fr.financing_type_id = ft.id
       LEFT JOIN users u ON fr.assigned_to = u.id
       WHERE fr.tenant_id = ${tenantId}
       ORDER BY fr.created_at DESC
