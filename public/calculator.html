@@ -547,56 +547,82 @@
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    preview.innerHTML = \`
+                    preview.innerHTML = `
                         <div class="flex items-center gap-3 bg-green-50 border border-green-300 rounded p-2">
-                            <img src="\${e.target.result}" class="w-20 h-20 object-cover rounded border">
+                            <img src="${e.target.result}" class="w-20 h-20 object-cover rounded border">
                             <div class="flex-1">
-                                <p class="text-sm font-bold text-green-800">\${file.name}</p>
-                                <p class="text-xs text-green-600">\${(file.size / 1024).toFixed(1)} KB</p>
+                                <p class="text-sm font-bold text-green-800">${file.name}</p>
+                                <p class="text-xs text-green-600">${(file.size / 1024).toFixed(1)} KB</p>
                             </div>
                             <i class="fas fa-check-circle text-2xl text-green-600"></i>
                         </div>
-                    \`;
+                    `;
                 };
                 reader.readAsDataURL(file);
             } else {
-                preview.innerHTML = \`
+                preview.innerHTML = `
                     <div class="flex items-center gap-3 bg-green-50 border border-green-300 rounded p-2">
                         <i class="fas fa-file-pdf text-4xl text-red-600"></i>
                         <div class="flex-1">
-                            <p class="text-sm font-bold text-green-800">\${file.name}</p>
-                            <p class="text-xs text-green-600">\${(file.size / 1024).toFixed(1)} KB</p>
+                            <p class="text-sm font-bold text-green-800">${file.name}</p>
+                            <p class="text-xs text-green-600">${(file.size / 1024).toFixed(1)} KB</p>
                         </div>
                         <i class="fas fa-check-circle text-2xl text-green-600"></i>
                     </div>
-                \`;
+                `;
             }
         }
         
         // Load initial data
         async function loadData() {
             try {
+                console.log('🔄 Loading calculator data...');
                 const [banksRes, typesRes, ratesRes] = await Promise.all([
                     axios.get('/api/banks'),
                     axios.get('/api/financing-types'),
                     axios.get('/api/rates')
                 ]);
                 
-                allBanks = banksRes.data.data;
-                financingTypes = typesRes.data.data;
-                allRates = ratesRes.data.data;
+                console.log('📦 API Responses:', {
+                    banks: banksRes.data,
+                    types: typesRes.data,
+                    rates: ratesRes.data
+                });
+                
+                allBanks = banksRes.data.data || [];
+                financingTypes = typesRes.data.data || [];
+                allRates = ratesRes.data.data || [];
+                
+                console.log('✅ Loaded data:', {
+                    banksCount: allBanks.length,
+                    typesCount: financingTypes.length,
+                    ratesCount: allRates.length
+                });
                 
                 // Populate financing types
                 const typeSelect = document.getElementById('financingType');
-                financingTypes.forEach(type => {
+                typeSelect.innerHTML = '<option value="">اختر نوع التمويل</option>';
+                
+                if (financingTypes.length === 0) {
+                    console.warn('⚠️ No financing types found!');
                     const option = document.createElement('option');
-                    option.value = type.id;
-                    option.textContent = type.type_name;
+                    option.value = '';
+                    option.textContent = 'لا توجد أنواع تمويل - يرجى إضافتها من لوحة التحكم';
+                    option.disabled = true;
                     typeSelect.appendChild(option);
-                });
+                } else {
+                    financingTypes.forEach(type => {
+                        const option = document.createElement('option');
+                        option.value = type.id;
+                        option.textContent = type.type_name || type.name || 'غير محدد';
+                        typeSelect.appendChild(option);
+                    });
+                    console.log('✅ Populated', financingTypes.length, 'financing types');
+                }
             } catch (error) {
-                console.error('Error loading data:', error);
-                alert('خطأ في تحميل البيانات');
+                console.error('❌ Error loading data:', error);
+                console.error('Error details:', error.response?.data || error.message);
+                alert('خطأ في تحميل البيانات: ' + (error.response?.data?.error || error.message));
             }
         }
         
@@ -756,18 +782,18 @@
                         
                         for (const attachment of attachments) {
                             // Add progress bar
-                            const progressId = \`progress-\${attachment.type}\`;
-                            progressContainer.innerHTML += \`
+                            const progressId = `progress-${attachment.type}`;
+                            progressContainer.innerHTML += `
                                 <div class="bg-gray-100 rounded p-3">
                                     <div class="flex justify-between items-center mb-1">
-                                        <span class="text-sm font-bold text-gray-700">\${attachment.label}</span>
-                                        <span id="\${progressId}-status" class="text-xs text-gray-600">جاري الرفع...</span>
+                                        <span class="text-sm font-bold text-gray-700">${attachment.label}</span>
+                                        <span id="${progressId}-status" class="text-xs text-gray-600">جاري الرفع...</span>
                                     </div>
                                     <div class="w-full bg-gray-300 rounded-full h-2">
-                                        <div id="\${progressId}-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                        <div id="${progressId}-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
                                     </div>
                                 </div>
-                            \`;
+                            `;
                             
                             const formData = new FormData();
                             formData.append('file', attachment.file);
@@ -782,8 +808,8 @@
                             
                             try {
                                 // Simulate progress (since R2 upload doesn't report progress)
-                                const progressBar = document.getElementById(\`\${progressId}-bar\`);
-                                const progressStatus = document.getElementById(\`\${progressId}-status\`);
+                                const progressBar = document.getElementById(`${progressId}-bar`);
+                                const progressStatus = document.getElementById(`${progressId}-status`);
                                 
                                 progressBar.style.width = '30%';
                                 
@@ -801,9 +827,9 @@
                                 progressStatus.classList.add('text-green-600');
                                 uploadedCount++;
                             } catch (uploadError) {
-                                console.error(\`Error uploading \${attachment.type}:\`, uploadError);
-                                const progressBar = document.getElementById(\`\${progressId}-bar\`);
-                                const progressStatus = document.getElementById(\`\${progressId}-status\`);
+                                console.error(`Error uploading ${attachment.type}:`, uploadError);
+                                const progressBar = document.getElementById(`${progressId}-bar`);
+                                const progressStatus = document.getElementById(`${progressId}-status`);
                                 progressBar.style.width = '100%';
                                 progressBar.classList.remove('bg-blue-600');
                                 progressBar.classList.add('bg-red-600');
@@ -848,16 +874,16 @@
             
             // Display qualification status
             const qualificationDiv = document.getElementById('qualificationStatus');
-            qualificationDiv.innerHTML = \`
-                <div class="inline-block qualification-badge \${isQualified ? 'qualified' : 'not-qualified'}">
-                    <i class="fas fa-\${isQualified ? 'check-circle' : 'times-circle'} ml-2"></i>
-                    \${isQualified ? 'مؤهل للحصول على التمويل' : 'غير مؤهل للحصول على التمويل'}
+            qualificationDiv.innerHTML = `
+                <div class="inline-block qualification-badge ${isQualified ? 'qualified' : 'not-qualified'}">
+                    <i class="fas fa-${isQualified ? 'check-circle' : 'times-circle'} ml-2"></i>
+                    ${isQualified ? 'مؤهل للحصول على التمويل' : 'غير مؤهل للحصول على التمويل'}
                 </div>
                 <div class="mt-4 text-gray-700">
-                    <p>الدخل المتاح: <span class="font-bold text-blue-600">\${availableIncome.toLocaleString('ar-SA')} ريال</span></p>
-                    <p>القدرة الشرائية: <span class="font-bold text-green-600">\${maxMonthlyPayment.toLocaleString('ar-SA')} ريال</span></p>
+                    <p>الدخل المتاح: <span class="font-bold text-blue-600">${availableIncome.toLocaleString('ar-SA')} ريال</span></p>
+                    <p>القدرة الشرائية: <span class="font-bold text-green-600">${maxMonthlyPayment.toLocaleString('ar-SA')} ريال</span></p>
                 </div>
-            \`;
+            `;
             
             if (!isQualified) {
                 document.getElementById('bestOfferBanner').classList.add('hidden');
@@ -970,11 +996,11 @@
             selectedBestOffer = bestOffer;
             
             // Update best offer banner
-            document.getElementById('bestOfferText').innerHTML = \`
-                <span class="text-2xl">أفضل عرض من <span class="font-bold">\${bestOffer.bank.bank_name}</span></span>
+            document.getElementById('bestOfferText').innerHTML = `
+                <span class="text-2xl">أفضل عرض من <span class="font-bold">${bestOffer.bank.bank_name}</span></span>
                 <br>
-                <span class="text-lg">قسط شهري: \${bestOffer.bestCalculation.monthlyPayment.toLocaleString('ar-SA')} ريال</span>
-            \`;
+                <span class="text-lg">قسط شهري: ${bestOffer.bestCalculation.monthlyPayment.toLocaleString('ar-SA')} ريال</span>
+            `;
             
             // Show complete request button
             document.getElementById('completeRequestBtn').classList.remove('hidden');
@@ -983,46 +1009,46 @@
             const offersGrid = document.getElementById('offersGrid');
             offersGrid.innerHTML = offers.map((offer, index) => {
                 const isBest = index === 0;
-                return \`
-                    <div class="bank-card \${isBest ? 'best-offer' : 'bg-white'} rounded-xl shadow-lg p-6 relative">
-                        \${isBest ? '<div class="absolute top-0 right-0 bg-green-500 text-white px-4 py-1 rounded-tr-xl rounded-bl-xl font-bold"><i class="fas fa-star ml-1"></i>الأفضل</div>' : ''}
+                return `
+                    <div class="bank-card ${isBest ? 'best-offer' : 'bg-white'} rounded-xl shadow-lg p-6 relative">
+                        ${isBest ? '<div class="absolute top-0 right-0 bg-green-500 text-white px-4 py-1 rounded-tr-xl rounded-bl-xl font-bold"><i class="fas fa-star ml-1"></i>الأفضل</div>' : ''}
                         
-                        <div class="text-center mb-4 \${isBest ? 'mt-6' : ''}">
+                        <div class="text-center mb-4 ${isBest ? 'mt-6' : ''}">
                             <div class="inline-block bg-blue-100 rounded-full p-3 mb-2">
                                 <i class="fas fa-university text-3xl text-blue-600"></i>
                             </div>
-                            <h4 class="text-xl font-bold text-gray-800">\${offer.bank.bank_name}</h4>
+                            <h4 class="text-xl font-bold text-gray-800">${offer.bank.bank_name}</h4>
                         </div>
                         
                         <div class="space-y-3">
                             <div class="bg-gray-50 p-3 rounded-lg">
                                 <div class="text-sm text-gray-600">نسبة الفائدة</div>
-                                <div class="text-lg font-bold text-blue-600">\${offer.rate}%</div>
+                                <div class="text-lg font-bold text-blue-600">${offer.rate}%</div>
                             </div>
                             
                             <div class="bg-blue-50 p-3 rounded-lg">
                                 <div class="text-sm text-gray-600">القسط الشهري</div>
-                                <div class="text-2xl font-bold text-blue-600">\${offer.bestCalculation.monthlyPayment.toLocaleString('ar-SA')} <span class="text-sm">ريال</span></div>
+                                <div class="text-2xl font-bold text-blue-600">${offer.bestCalculation.monthlyPayment.toLocaleString('ar-SA')} <span class="text-sm">ريال</span></div>
                             </div>
                             
                             <div class="grid grid-cols-2 gap-2">
                                 <div class="bg-gray-50 p-2 rounded text-center">
                                     <div class="text-xs text-gray-600">المدة</div>
-                                    <div class="font-bold">\${offer.bestCalculation.duration} شهر</div>
+                                    <div class="font-bold">${offer.bestCalculation.duration} شهر</div>
                                 </div>
                                 <div class="bg-gray-50 p-2 rounded text-center">
                                     <div class="text-xs text-gray-600">إجمالي الفائدة</div>
-                                    <div class="font-bold text-orange-600">\${offer.bestCalculation.totalInterest.toLocaleString('ar-SA')}</div>
+                                    <div class="font-bold text-orange-600">${offer.bestCalculation.totalInterest.toLocaleString('ar-SA')}</div>
                                 </div>
                             </div>
                             
                             <div class="bg-purple-50 p-3 rounded-lg">
                                 <div class="text-sm text-gray-600">إجمالي المبلغ</div>
-                                <div class="text-xl font-bold text-purple-600">\${offer.bestCalculation.totalPayment.toLocaleString('ar-SA')} <span class="text-sm">ريال</span></div>
+                                <div class="text-xl font-bold text-purple-600">${offer.bestCalculation.totalPayment.toLocaleString('ar-SA')} <span class="text-sm">ريال</span></div>
                             </div>
                         </div>
                     </div>
-                \`;
+                `;
             }).join('');
             
             // Display comparison table
@@ -1033,7 +1059,7 @@
             const comparisonTable = document.getElementById('comparisonTable');
             if (!comparisonTable) return;
             
-            comparisonTable.innerHTML = \`
+            comparisonTable.innerHTML = `
                 <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
                     <div class="flex justify-between items-center mb-6">
                         <div>
@@ -1063,25 +1089,25 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                \${offers.map((offer, index) => {
+                                ${offers.map((offer, index) => {
                                     const isBest = index === 0;
                                     const savings = index > 0 ? offer.bestCalculation.totalInterest - offers[0].bestCalculation.totalInterest : 0;
-                                    return \`
-                                        <tr class="\${isBest ? 'bg-green-50 font-bold' : 'hover:bg-gray-50'}">
+                                    return `
+                                        <tr class="${isBest ? 'bg-green-50 font-bold' : 'hover:bg-gray-50'}">
                                             <td class="px-4 py-3 border-t">
-                                                \${offer.bank.bank_name}
-                                                \${isBest ? '<span class="mr-2 text-green-600"><i class="fas fa-star"></i></span>' : ''}
+                                                ${offer.bank.bank_name}
+                                                ${isBest ? '<span class="mr-2 text-green-600"><i class="fas fa-star"></i></span>' : ''}
                                             </td>
-                                            <td class="px-4 py-3 border-t">\${offer.rate}%</td>
-                                            <td class="px-4 py-3 border-t text-blue-600">\${offer.bestCalculation.monthlyPayment.toLocaleString('ar-SA')} ر.س</td>
-                                            <td class="px-4 py-3 border-t">\${offer.bestCalculation.duration} شهر</td>
-                                            <td class="px-4 py-3 border-t text-orange-600">\${offer.bestCalculation.totalInterest.toLocaleString('ar-SA')} ر.س</td>
-                                            <td class="px-4 py-3 border-t text-purple-600">\${offer.bestCalculation.totalPayment.toLocaleString('ar-SA')} ر.س</td>
-                                            <td class="px-4 py-3 border-t \${isBest ? 'text-green-600' : 'text-red-600'}">
-                                                \${isBest ? 'الأفضل ✓' : '+' + savings.toLocaleString('ar-SA') + ' ر.س'}
+                                            <td class="px-4 py-3 border-t">${offer.rate}%</td>
+                                            <td class="px-4 py-3 border-t text-blue-600">${offer.bestCalculation.monthlyPayment.toLocaleString('ar-SA')} ر.س</td>
+                                            <td class="px-4 py-3 border-t">${offer.bestCalculation.duration} شهر</td>
+                                            <td class="px-4 py-3 border-t text-orange-600">${offer.bestCalculation.totalInterest.toLocaleString('ar-SA')} ر.س</td>
+                                            <td class="px-4 py-3 border-t text-purple-600">${offer.bestCalculation.totalPayment.toLocaleString('ar-SA')} ر.س</td>
+                                            <td class="px-4 py-3 border-t ${isBest ? 'text-green-600' : 'text-red-600'}">
+                                                ${isBest ? 'الأفضل ✓' : '+' + savings.toLocaleString('ar-SA') + ' ر.س'}
                                             </td>
                                         </tr>
-                                    \`;
+                                    `;
                                 }).join('')}
                             </tbody>
                         </table>
@@ -1094,11 +1120,11 @@
                             نصائح ذكية
                         </h4>
                         <ul class="text-sm text-gray-700 space-y-2">
-                            \${generateSmartRecommendations(offers)}
+                            ${generateSmartRecommendations(offers)}
                         </ul>
                     </div>
                 </div>
-            \`;
+            `;
         }
         
         function generateSmartRecommendations(offers) {
@@ -1108,27 +1134,27 @@
             const bestOffer = offers[0];
             
             // Recommendation 1: Best bank
-            recommendations.push(\`<li><i class="fas fa-check-circle text-green-600 ml-2"></i>عرض <strong>\${bestOffer.bank.bank_name}</strong> هو الأفضل بقسط شهري \${bestOffer.bestCalculation.monthlyPayment.toLocaleString('ar-SA')} ريال</li>\`);
+            recommendations.push(`<li><i class="fas fa-check-circle text-green-600 ml-2"></i>عرض <strong>${bestOffer.bank.bank_name}</strong> هو الأفضل بقسط شهري ${bestOffer.bestCalculation.monthlyPayment.toLocaleString('ar-SA')} ريال</li>`);
             
             // Recommendation 2: Savings
             if (offers.length > 1) {
                 const savings = offers[1].bestCalculation.totalInterest - bestOffer.bestCalculation.totalInterest;
-                recommendations.push(\`<li><i class="fas fa-piggy-bank text-green-600 ml-2"></i>ستوفر <strong>\${savings.toLocaleString('ar-SA')} ريال</strong> بالمقارنة مع ثاني أفضل عرض</li>\`);
+                recommendations.push(`<li><i class="fas fa-piggy-bank text-green-600 ml-2"></i>ستوفر <strong>${savings.toLocaleString('ar-SA')} ريال</strong> بالمقارنة مع ثاني أفضل عرض</li>`);
             }
             
             // Recommendation 3: Duration advice
             if (bestOffer.bestCalculation.duration >= 60) {
-                recommendations.push(\`<li><i class="fas fa-clock text-orange-600 ml-2"></i>المدة طويلة (\${bestOffer.bestCalculation.duration} شهر). حاول تقليصها إن أمكن لتوفير المزيد من الفوائد</li>\`);
+                recommendations.push(`<li><i class="fas fa-clock text-orange-600 ml-2"></i>المدة طويلة (${bestOffer.bestCalculation.duration} شهر). حاول تقليصها إن أمكن لتوفير المزيد من الفوائد</li>`);
             } else {
-                recommendations.push(\`<li><i class="fas fa-clock text-green-600 ml-2"></i>مدة التمويل معقولة (\${bestOffer.bestCalculation.duration} شهر)</li>\`);
+                recommendations.push(`<li><i class="fas fa-clock text-green-600 ml-2"></i>مدة التمويل معقولة (${bestOffer.bestCalculation.duration} شهر)</li>`);
             }
             
             // Recommendation 4: Monthly payment
             const paymentRatio = (bestOffer.bestCalculation.monthlyPayment / calculationData.salary) * 100;
             if (paymentRatio <= 25) {
-                recommendations.push(\`<li><i class="fas fa-check-circle text-green-600 ml-2"></i>القسط الشهري يشكل \${paymentRatio.toFixed(1)}% فقط من راتبك - نسبة ممتازة!</li>\`);
+                recommendations.push(`<li><i class="fas fa-check-circle text-green-600 ml-2"></i>القسط الشهري يشكل ${paymentRatio.toFixed(1)}% فقط من راتبك - نسبة ممتازة!</li>`);
             } else {
-                recommendations.push(\`<li><i class="fas fa-exclamation-triangle text-orange-600 ml-2"></i>القسط الشهري يشكل \${paymentRatio.toFixed(1)}% من راتبك - تأكد من قدرتك على الالتزام</li>\`);
+                recommendations.push(`<li><i class="fas fa-exclamation-triangle text-orange-600 ml-2"></i>القسط الشهري يشكل ${paymentRatio.toFixed(1)}% من راتبك - تأكد من قدرتك على الالتزام</li>`);
             }
             
             return recommendations.join('');

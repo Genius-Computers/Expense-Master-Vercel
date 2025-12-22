@@ -3,5 +3,5 @@ node_modules/
 .env.local
 .vercel
 *.log
-testing-external environment/
+# testing-external environment/
 

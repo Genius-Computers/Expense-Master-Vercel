@@ -192,6 +192,12 @@
                         <div class="text-sm font-bold">البنوك</div>
                     </a>
                     
+                    <!-- زر أنواع التمويل -->
+                    <a href="/admin/financing-types" class="quick-access-btn bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-lg p-4 transition-all transform hover:scale-105 shadow-lg block text-center">
+                        <i class="fas fa-tags text-3xl mb-2"></i>
+                        <div class="text-sm font-bold">أنواع التمويل</div>
+                    </a>
+                    
                     <!-- زر نسب التمويل -->
                     <a href="/admin/rates" class="quick-access-btn bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg p-4 transition-all transform hover:scale-105 shadow-lg block text-center">
                         <i class="fas fa-percentage text-3xl mb-2"></i>
@@ -661,6 +667,41 @@
                 </div>
             </div>
 
+            <div id="financing-types-section" class="content-section">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-3xl font-bold text-gray-800">
+                        <i class="fas fa-tags text-indigo-600 ml-2"></i>
+                        أنواع التمويل
+                    </h1>
+                    <button onclick="addFinancingType()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-bold">
+                        <i class="fas fa-plus ml-2"></i>
+                        إضافة نوع تمويل جديد
+                    </button>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">م</th>
+                                    <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">اسم نوع التمويل</th>
+                                    <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">الحالة</th>
+                                    <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="financingTypesTable">
+                                <tr>
+                                    <td colspan="4" class="text-center py-8">
+                                        <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div id="rates-section" class="content-section">
                 <div class="flex items-center justify-between mb-6">
                     <h1 class="text-3xl font-bold text-gray-800">
@@ -1034,6 +1075,34 @@
             </div>
         </div>
         
+        <!-- Add Financing Type Modal -->
+        <div id="addFinancingTypeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" style="display: none;">
+            <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                    <i class="fas fa-tags text-indigo-600 ml-2"></i>
+                    إضافة نوع تمويل جديد
+                </h2>
+                <form id="addFinancingTypeForm">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">اسم نوع التمويل *</label>
+                            <input type="text" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="مثال: تمويل شخصي">
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-6">
+                        <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg font-bold">
+                            <i class="fas fa-save ml-2"></i>
+                            حفظ
+                        </button>
+                        <button type="button" onclick="closeModal('addFinancingTypeModal')" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-lg font-bold">
+                            <i class="fas fa-times ml-2"></i>
+                            إلغاء
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
         <!-- Add Bank Modal -->
         <div id="addBankModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" style="display: none;">
             <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -1375,6 +1444,7 @@
             '/admin/customers': 'customers',
             '/admin/requests': 'financing-requests',
             '/admin/banks': 'banks',
+            '/admin/financing-types': 'financing-types',
             '/admin/rates': 'rates',
             '/admin/reports': 'reports',
             '/admin/payments': 'payments',
@@ -1392,21 +1462,45 @@
             const path = window.location.pathname;
             const sectionName = routeMap[path] || 'dashboard';
             
+            console.log('🔍 Current path:', path, '→ Section:', sectionName);
+            
             // Show the appropriate section
             goToSection(sectionName);
+        }
+        
+        // Set up link interception using event delegation (more reliable)
+        let linkInterceptionSetup = false;
+        function setupLinkInterception() {
+            if (linkInterceptionSetup) {
+                return; // Already set up
+            }
             
-            // Intercept all admin link clicks to prevent full page reload
-            document.querySelectorAll('a[href^="/admin/"]').forEach(link => {
-                link.addEventListener('click', (e) => {
+            // Use event delegation - listen on document for all clicks
+            document.addEventListener('click', function(e) {
+                // Check if clicked element is an admin link or inside one
+                const link = e.target.closest('a[href^="/admin/"]');
+                if (link) {
                     e.preventDefault();
+                    e.stopPropagation();
                     const href = link.getAttribute('href');
+                    console.log('🔗 Admin link clicked:', href);
                     const targetSection = routeMap[href];
-                    if (targetSection) {
+                    console.log('🔍 Route map lookup:', href, '→', targetSection);
+                    if (targetSection && window.goToSection) {
+                        console.log('✅ Routing to section:', targetSection);
                         window.history.pushState({}, '', href);
-                        goToSection(targetSection);
+                        window.goToSection(targetSection);
+                    } else {
+                        console.warn('⚠️ No route found for:', href, 'Available routes:', Object.keys(routeMap));
+                        if (!window.goToSection) {
+                            console.error('❌ goToSection function not defined!');
+                        }
                     }
-                });
-            });
+                }
+            }, true); // Use capture phase
+            
+            linkInterceptionSetup = true;
+            console.log('✅ Link interception set up with event delegation');
         }
 
         // Handle browser back/forward buttons
@@ -1414,14 +1508,7 @@
             initRouting();
         });
 
-        // Initialize routing when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initRouting);
-        } else {
-            initRouting();
-        }
-
-        // دالة بسيطة للانتقال بين الأقسام
+        // دالة بسيطة للانتقال بين الأقسام - Define BEFORE setup
         window.goToSection = function(sectionName) {
             console.log('🚀 الانتقال إلى:', sectionName);
             
@@ -1435,13 +1522,32 @@
             const targetSection = document.getElementById(sectionName + '-section');
             if (targetSection) {
                 targetSection.classList.add('active');
-                console.log('✅ تم تفعيل القسم:', sectionName);
+                console.log('✅ تم تفعيل القسم:', sectionName, 'Element ID:', targetSection.id);
+                
+                // Scroll to top of section
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 
                 // تحميل البيانات
-                window.loadSectionData(sectionName);
+                if (window.loadSectionData) {
+                    window.loadSectionData(sectionName);
+                }
             } else {
-                console.error('❌ القسم غير موجود:', sectionName);
+                console.error('❌ القسم غير موجود:', sectionName + '-section');
+                const availableSections = Array.from(document.querySelectorAll('.content-section')).map(s => s.id);
+                console.log('🔍 Available sections:', availableSections);
+                alert('القسم غير موجود: ' + sectionName);
             }
+        }
+        
+        // Initialize routing when DOM is ready - AFTER goToSection is defined
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                initRouting();
+                setupLinkInterception();
+            });
+        } else {
+            initRouting();
+            setupLinkInterception();
         }
         
         // دالة تسجيل الخروج - تعريف مباشر
@@ -1566,7 +1672,29 @@
                 }
                 
                 const user = JSON.parse(userStr);
-                const roleId = user.role_id || 3; // Default to Employee (Role 3)
+                
+                // Determine roleId: some flows store role_id (number), others store role (string)
+                const roleMap = {
+                    superadmin: 1,
+                    admin: 1,
+                    company: 4,
+                    supervisor: 5,
+                    employee: 3,
+                    user: 3
+                };
+                
+                const roleId = Number(
+                    user.role_id ||
+                    user.roleId ||
+                    roleMap[String(user.role || '').toLowerCase()] ||
+                    0
+                );
+                
+                // If we can't determine role, fail-open (do not hide buttons)
+                if (!roleId) {
+                    console.warn('⚠️ تعذر تحديد role_id من بيانات المستخدم - عرض جميع الأزرار افتراضياً');
+                    return;
+                }
                 
                 console.log('👤 role_id:', roleId);
                 console.log('📋 user data:', user);
@@ -1578,6 +1706,7 @@
                         '/admin/customers', 
                         '/admin/requests',
                         '/admin/banks',
+                        '/admin/financing-types',
                         '/admin/rates',
                         '/admin/subscriptions',
                         '/admin/packages',
@@ -1598,6 +1727,7 @@
                         '/admin/users',
                         '/admin/reports',
                         '/admin/banks', // Read-only
+                        '/admin/financing-types',
                         '/admin/rates', // Read-only
                         '/calculator',
                         '/'
@@ -1608,6 +1738,7 @@
                         '/admin/requests',
                         '/admin/reports',
                         '/admin/banks',
+                        '/admin/financing-types',
                         '/admin/rates',
                         '/calculator',
                         '/'
@@ -1746,8 +1877,8 @@
                 
                 // إذا كان المستخدم لديه tenant_slug، استخدم حاسبة الشركة
                 if (user.tenant_slug) {
-                    calculatorLink.href = \`/c/\${user.tenant_slug}/calculator\`;
-                    console.log(\`✅ تم تحديث رابط الحاسبة إلى: /c/\${user.tenant_slug}/calculator\`);
+                    calculatorLink.href = `/c/${user.tenant_slug}/calculator`;
+                    console.log(`✅ تم تحديث رابط الحاسبة إلى: /c/${user.tenant_slug}/calculator`);
                 } else {
                     // SuperAdmin أو مستخدم بدون شركة: استخدم الحاسبة العامة
                     calculatorLink.href = '/calculator';
@@ -1778,6 +1909,9 @@
                     break;
                 case 'banks':
                     await loadBanks();
+                    break;
+                case 'financing-types':
+                    await loadFinancingTypes();
                     break;
                 case 'rates':
                     await loadRates();
@@ -1831,38 +1965,38 @@
                         return;
                     }
                     
-                    tbody.innerHTML = customers.map((customer, index) => \`
+                    tbody.innerHTML = customers.map((customer, index) => `
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="px-4 py-3">\${index + 1}</td>
+                            <td class="px-4 py-3">${index + 1}</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-2">
-                                    <span class="font-medium">\${customer.full_name}</span>
-                                    <button onclick="viewCustomerFinancingDetails(\${customer.id})" 
+                                    <span class="font-medium">${customer.full_name}</span>
+                                    <button onclick="viewCustomerFinancingDetails(${customer.id})" 
                                             class="text-indigo-600 hover:text-indigo-800 transition-colors" 
                                             title="عرض التفاصيل التمويلية الكاملة">
                                         <i class="fas fa-info-circle text-lg"></i>
                                     </button>
                                 </div>
                             </td>
-                            <td class="px-4 py-3">\${customer.phone}</td>
-                            <td class="px-4 py-3 text-sm">\${customer.birthdate || '-'}</td>
-                            <td class="px-4 py-3 font-medium text-green-600">\${customer.monthly_salary ? customer.monthly_salary.toLocaleString('ar-SA') + ' ريال' : '-'}</td>
-                            <td class="px-4 py-3 font-medium text-purple-600">\${customer.financing_amount ? customer.financing_amount.toLocaleString('ar-SA') + ' ريال' : '-'}</td>
-                            <td class="px-4 py-3 text-sm text-orange-600">\${customer.monthly_obligations ? customer.monthly_obligations.toLocaleString('ar-SA') + ' ريال' : '-'}</td>
-                            <td class="px-4 py-3 text-sm">\${customer.financing_type_name || '-'}</td>
+                            <td class="px-4 py-3">${customer.phone}</td>
+                            <td class="px-4 py-3 text-sm">${customer.birthdate || '-'}</td>
+                            <td class="px-4 py-3 font-medium text-green-600">${customer.monthly_salary ? customer.monthly_salary.toLocaleString('ar-SA') + ' ريال' : '-'}</td>
+                            <td class="px-4 py-3 font-medium text-purple-600">${customer.financing_amount ? customer.financing_amount.toLocaleString('ar-SA') + ' ريال' : '-'}</td>
+                            <td class="px-4 py-3 text-sm text-orange-600">${customer.monthly_obligations ? customer.monthly_obligations.toLocaleString('ar-SA') + ' ريال' : '-'}</td>
+                            <td class="px-4 py-3 text-sm">${customer.financing_type_name || '-'}</td>
                             <td class="px-4 py-3">
-                                <button onclick="viewCustomer(\${customer.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض الملف الكامل">
+                                <button onclick="viewCustomer(${customer.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض الملف الكامل">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button onclick="editCustomer(\${customer.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
+                                <button onclick="editCustomer(${customer.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button onclick="deleteCustomer(\${customer.id})" class="text-red-600 hover:text-red-800" title="حذف">
+                                <button onclick="deleteCustomer(${customer.id})" class="text-red-600 hover:text-red-800" title="حذف">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
-                    \`).join('');
+                    `).join('');
                 }
             } catch (error) {
                 console.error('Error loading customers:', error);
@@ -1894,31 +2028,31 @@
                             'rejected': 'مرفوض'
                         };
                         
-                        return \`
+                        return `
                             <tr class="border-b hover:bg-gray-50">
-                                <td class="px-4 py-3">\${index + 1}</td>
-                                <td class="px-4 py-3 font-medium">\${req.customer_name}</td>
-                                <td class="px-4 py-3">\${req.customer_phone}</td>
-                                <td class="px-4 py-3 text-sm">\${req.financing_type_name || '-'}</td>
-                                <td class="px-4 py-3 font-medium">\${req.requested_amount.toLocaleString('ar-SA')}</td>
-                                <td class="px-4 py-3">\${req.duration_months} شهر</td>
-                                <td class="px-4 py-3 text-sm">\${req.selected_bank_name || '-'}</td>
+                                <td class="px-4 py-3">${index + 1}</td>
+                                <td class="px-4 py-3 font-medium">${req.customer_name}</td>
+                                <td class="px-4 py-3">${req.customer_phone}</td>
+                                <td class="px-4 py-3 text-sm">${req.financing_type_name || '-'}</td>
+                                <td class="px-4 py-3 font-medium">${req.requested_amount.toLocaleString('ar-SA')}</td>
+                                <td class="px-4 py-3">${req.duration_months} شهر</td>
+                                <td class="px-4 py-3 text-sm">${req.selected_bank_name || '-'}</td>
                                 <td class="px-4 py-3">
-                                    <span class="\${statusColors[req.status]} px-2 py-1 rounded text-xs">\${statusText[req.status]}</span>
+                                    <span class="${statusColors[req.status]} px-2 py-1 rounded text-xs">${statusText[req.status]}</span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <button onclick="viewRequest(\${req.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
+                                    <button onclick="viewRequest(${req.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="updateStatus(\${req.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل الحالة">
+                                    <button onclick="updateStatus(${req.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل الحالة">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="deleteRequest(\${req.id})" class="text-red-600 hover:text-red-800" title="حذف">
+                                    <button onclick="deleteRequest(${req.id})" class="text-red-600 hover:text-red-800" title="حذف">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>
-                        \`;
+                        `;
                     }).join('');
                 }
             } catch (error) {
@@ -1960,7 +2094,7 @@
                     }
                     
                     // Create modal content
-                    const modalContent = \`
+                    const modalContent = `
                         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="this.remove()">
                             <div class="bg-white rounded-xl p-8 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
                                 <div class="flex items-center justify-between mb-6">
@@ -1984,37 +2118,37 @@
                                     
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-600 mb-1">الاسم الكامل</p>
-                                        <p class="text-lg font-bold text-gray-800">\${customer.full_name || '-'}</p>
+                                        <p class="text-lg font-bold text-gray-800">${customer.full_name || '-'}</p>
                                     </div>
                                     
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-600 mb-1">رقم الجوال</p>
-                                        <p class="text-lg font-bold text-gray-800">\${customer.phone || '-'}</p>
+                                        <p class="text-lg font-bold text-gray-800">${customer.phone || '-'}</p>
                                     </div>
                                     
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-600 mb-1">البريد الإلكتروني</p>
-                                        <p class="text-lg font-bold text-gray-800">\${customer.email || '-'}</p>
+                                        <p class="text-lg font-bold text-gray-800">${customer.email || '-'}</p>
                                     </div>
                                     
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-600 mb-1">رقم الهوية الوطني</p>
-                                        <p class="text-lg font-bold text-gray-800">\${customer.national_id && !customer.national_id.startsWith('TEMP-') ? customer.national_id : 'غير متوفر'}</p>
+                                        <p class="text-lg font-bold text-gray-800">${customer.national_id && !customer.national_id.startsWith('TEMP-') ? customer.national_id : 'غير متوفر'}</p>
                                     </div>
                                     
                                     <div class="bg-blue-50 p-4 rounded-lg">
                                         <p class="text-sm text-blue-600 mb-1">📅 تاريخ الميلاد</p>
-                                        <p class="text-lg font-bold text-blue-800">\${customer.birthdate || 'غير متوفر'}</p>
+                                        <p class="text-lg font-bold text-blue-800">${customer.birthdate || 'غير متوفر'}</p>
                                     </div>
                                     
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-600 mb-1">المدينة</p>
-                                        <p class="text-lg font-bold text-gray-800">\${customer.city || 'غير متوفر'}</p>
+                                        <p class="text-lg font-bold text-gray-800">${customer.city || 'غير متوفر'}</p>
                                     </div>
                                     
                                     <div class="bg-purple-50 p-4 rounded-lg">
                                         <p class="text-sm text-purple-600 mb-1">📝 تاريخ التسجيل</p>
-                                        <p class="text-lg font-bold text-purple-800">\${customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar-SA') : 'غير متوفر'}</p>
+                                        <p class="text-lg font-bold text-purple-800">${customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar-SA') : 'غير متوفر'}</p>
                                     </div>
                                     
                                     <!-- Employment Information -->
@@ -2027,17 +2161,17 @@
                                     
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-600 mb-1">جهة العمل</p>
-                                        <p class="text-lg font-bold text-gray-800">\${customer.employer_name || '-'}</p>
+                                        <p class="text-lg font-bold text-gray-800">${customer.employer_name || '-'}</p>
                                     </div>
                                     
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-600 mb-1">المسمى الوظيفي</p>
-                                        <p class="text-lg font-bold text-gray-800">\${customer.job_title || '-'}</p>
+                                        <p class="text-lg font-bold text-gray-800">${customer.job_title || '-'}</p>
                                     </div>
                                     
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-600 mb-1">تاريخ بداية العمل</p>
-                                        <p class="text-lg font-bold text-gray-800">\${customer.work_start_date || '-'}</p>
+                                        <p class="text-lg font-bold text-gray-800">${customer.work_start_date || '-'}</p>
                                     </div>
                                     
                                     <!-- Financing Information -->
@@ -2050,27 +2184,27 @@
                                     
                                     <div class="bg-purple-50 p-4 rounded-lg border-2 border-purple-200">
                                         <p class="text-sm text-purple-600 mb-1">💰 مبلغ التمويل المطلوب</p>
-                                        <p class="text-2xl font-bold text-purple-700">\${customer.financing_amount ? customer.financing_amount.toLocaleString('ar-SA') + ' ريال' : 'غير محدد'}</p>
+                                        <p class="text-2xl font-bold text-purple-700">${customer.financing_amount ? customer.financing_amount.toLocaleString('ar-SA') + ' ريال' : 'غير محدد'}</p>
                                     </div>
                                     
                                     <div class="bg-green-50 p-4 rounded-lg border-2 border-green-200">
                                         <p class="text-sm text-green-600 mb-1">💵 الراتب الشهري</p>
-                                        <p class="text-2xl font-bold text-green-700">\${customer.monthly_salary ? customer.monthly_salary.toLocaleString('ar-SA') + ' ريال' : 'غير محدد'}</p>
+                                        <p class="text-2xl font-bold text-green-700">${customer.monthly_salary ? customer.monthly_salary.toLocaleString('ar-SA') + ' ريال' : 'غير محدد'}</p>
                                     </div>
                                     
                                     <div class="bg-orange-50 p-4 rounded-lg border-2 border-orange-200">
                                         <p class="text-sm text-orange-600 mb-1">📊 الالتزامات الشهرية</p>
-                                        <p class="text-2xl font-bold text-orange-700">\${customer.monthly_obligations ? customer.monthly_obligations.toLocaleString('ar-SA') + ' ريال' : '0 ريال'}</p>
+                                        <p class="text-2xl font-bold text-orange-700">${customer.monthly_obligations ? customer.monthly_obligations.toLocaleString('ar-SA') + ' ريال' : '0 ريال'}</p>
                                     </div>
                                     
                                     <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
                                         <p class="text-sm text-blue-600 mb-1">💳 الدخل المتاح</p>
-                                        <p class="text-2xl font-bold text-blue-700">\${customer.monthly_salary && customer.monthly_obligations ? (customer.monthly_salary - customer.monthly_obligations).toLocaleString('ar-SA') + ' ريال' : 'غير محسوب'}</p>
+                                        <p class="text-2xl font-bold text-blue-700">${customer.monthly_salary && customer.monthly_obligations ? (customer.monthly_salary - customer.monthly_obligations).toLocaleString('ar-SA') + ' ريال' : 'غير محسوب'}</p>
                                     </div>
                                     
                                     <div class="bg-indigo-50 p-4 rounded-lg col-span-2 border-2 border-indigo-200">
                                         <p class="text-sm text-indigo-600 mb-1">🏦 نوع التمويل</p>
-                                        <p class="text-xl font-bold text-indigo-800">\${customer.financing_type_name || 'غير محدد'}</p>
+                                        <p class="text-xl font-bold text-indigo-800">${customer.financing_type_name || 'غير محدد'}</p>
                                     </div>
                                     
                                     <!-- Requests Statistics -->
@@ -2083,22 +2217,22 @@
                                     
                                     <div class="bg-blue-50 p-4 rounded-lg text-center">
                                         <p class="text-sm text-blue-600 mb-1">إجمالي الطلبات</p>
-                                        <p class="text-3xl font-bold text-blue-700">\${customer.total_requests || 0}</p>
+                                        <p class="text-3xl font-bold text-blue-700">${customer.total_requests || 0}</p>
                                     </div>
                                     
                                     <div class="bg-yellow-50 p-4 rounded-lg text-center">
                                         <p class="text-sm text-yellow-600 mb-1">قيد الانتظار</p>
-                                        <p class="text-3xl font-bold text-yellow-700">\${customer.pending_requests || 0}</p>
+                                        <p class="text-3xl font-bold text-yellow-700">${customer.pending_requests || 0}</p>
                                     </div>
                                     
                                     <div class="bg-green-50 p-4 rounded-lg text-center">
                                         <p class="text-sm text-green-600 mb-1">موافق عليها</p>
-                                        <p class="text-3xl font-bold text-green-700">\${customer.approved_requests || 0}</p>
+                                        <p class="text-3xl font-bold text-green-700">${customer.approved_requests || 0}</p>
                                     </div>
                                 </div>
                                 
                                 <div class="flex justify-end gap-3 mt-6">
-                                    <button onclick="editCustomer(\${customer.id})" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold">
+                                    <button onclick="editCustomer(${customer.id})" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold">
                                         <i class="fas fa-edit ml-2"></i>
                                         تعديل
                                     </button>
@@ -2109,7 +2243,7 @@
                                 </div>
                             </div>
                         </div>
-                    \`;
+                    `;
                     
                     // Append modal to body
                     document.body.insertAdjacentHTML('beforeend', modalContent);
@@ -2186,7 +2320,7 @@
                 const bestOffer = offers.find(o => o.is_affordable) || offers[0];
                 
                 // Create detailed modal
-                const modalContent = \`
+                const modalContent = `
                     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="this.remove()">
                         <div class="bg-white rounded-xl max-w-5xl w-full max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
                             <!-- Header -->
@@ -2197,7 +2331,7 @@
                                             <i class="fas fa-calculator ml-2"></i>
                                             التفاصيل التمويلية الكاملة
                                         </h2>
-                                        <p class="text-indigo-100">\${customer.full_name}</p>
+                                        <p class="text-indigo-100">${customer.full_name}</p>
                                     </div>
                                     <button onclick="this.closest('.fixed').remove()" class="text-white hover:text-indigo-200">
                                         <i class="fas fa-times text-2xl"></i>
@@ -2215,15 +2349,15 @@
                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div class="bg-white rounded-lg p-4">
                                             <p class="text-sm text-gray-600 mb-1">تاريخ الميلاد</p>
-                                            <p class="text-lg font-bold text-gray-800">\${customer.birthdate || '-'}</p>
+                                            <p class="text-lg font-bold text-gray-800">${customer.birthdate || '-'}</p>
                                         </div>
                                         <div class="bg-white rounded-lg p-4">
                                             <p class="text-sm text-gray-600 mb-1">رقم الجوال</p>
-                                            <p class="text-lg font-bold text-gray-800">\${customer.phone}</p>
+                                            <p class="text-lg font-bold text-gray-800">${customer.phone}</p>
                                         </div>
                                         <div class="bg-white rounded-lg p-4">
                                             <p class="text-sm text-gray-600 mb-1">نوع التمويل</p>
-                                            <p class="text-lg font-bold text-gray-800">\${customer.financing_type_name || '-'}</p>
+                                            <p class="text-lg font-bold text-gray-800">${customer.financing_type_name || '-'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -2233,31 +2367,31 @@
                                     <div class="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl p-4 text-center">
                                         <i class="fas fa-money-bill-wave text-3xl mb-2 opacity-80"></i>
                                         <p class="text-sm opacity-90 mb-1">الراتب الشهري</p>
-                                        <p class="text-2xl font-bold">\${salary.toLocaleString('ar-SA')}</p>
+                                        <p class="text-2xl font-bold">${salary.toLocaleString('ar-SA')}</p>
                                         <p class="text-xs opacity-75">ريال</p>
                                     </div>
                                     <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-4 text-center">
                                         <i class="fas fa-hand-holding-usd text-3xl mb-2 opacity-80"></i>
                                         <p class="text-sm opacity-90 mb-1">مبلغ التمويل</p>
-                                        <p class="text-2xl font-bold">\${requestedAmount.toLocaleString('ar-SA')}</p>
+                                        <p class="text-2xl font-bold">${requestedAmount.toLocaleString('ar-SA')}</p>
                                         <p class="text-xs opacity-75">ريال</p>
                                     </div>
                                     <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-xl p-4 text-center">
                                         <i class="fas fa-credit-card text-3xl mb-2 opacity-80"></i>
                                         <p class="text-sm opacity-90 mb-1">الالتزامات</p>
-                                        <p class="text-2xl font-bold">\${obligations.toLocaleString('ar-SA')}</p>
+                                        <p class="text-2xl font-bold">${obligations.toLocaleString('ar-SA')}</p>
                                         <p class="text-xs opacity-75">ريال</p>
                                     </div>
                                     <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-4 text-center">
                                         <i class="fas fa-wallet text-3xl mb-2 opacity-80"></i>
                                         <p class="text-sm opacity-90 mb-1">الدخل المتاح</p>
-                                        <p class="text-2xl font-bold">\${availableIncome.toLocaleString('ar-SA')}</p>
+                                        <p class="text-2xl font-bold">${availableIncome.toLocaleString('ar-SA')}</p>
                                         <p class="text-xs opacity-75">ريال</p>
                                     </div>
                                 </div>
                                 
                                 <!-- Best Offer Section -->
-                                \${bestOffer ? \`
+                                ${bestOffer ? `
                                 <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-400 rounded-xl p-6 mb-6">
                                     <div class="flex items-center gap-3 mb-4">
                                         <div class="bg-yellow-500 text-white rounded-full p-3">
@@ -2265,29 +2399,29 @@
                                         </div>
                                         <div>
                                             <h3 class="text-2xl font-bold text-yellow-800">أفضل عرض مقترح</h3>
-                                            <p class="text-yellow-700">\${bestOffer.bank_name}</p>
+                                            <p class="text-yellow-700">${bestOffer.bank_name}</p>
                                         </div>
                                     </div>
                                     
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <div class="bg-white rounded-lg p-4 border-2 border-yellow-300">
                                             <p class="text-sm text-gray-600 mb-1">القسط الشهري</p>
-                                            <p class="text-2xl font-bold text-yellow-700">\${bestOffer.monthly_payment.toLocaleString('ar-SA', {maximumFractionDigits: 2})}</p>
+                                            <p class="text-2xl font-bold text-yellow-700">${bestOffer.monthly_payment.toLocaleString('ar-SA', {maximumFractionDigits: 2})}</p>
                                             <p class="text-xs text-gray-500">ريال / شهر</p>
                                         </div>
                                         <div class="bg-white rounded-lg p-4">
                                             <p class="text-sm text-gray-600 mb-1">نسبة الربح</p>
-                                            <p class="text-xl font-bold text-gray-800">\${bestOffer.profit_rate}%</p>
+                                            <p class="text-xl font-bold text-gray-800">${bestOffer.profit_rate}%</p>
                                             <p class="text-xs text-gray-500">سنوياً</p>
                                         </div>
                                         <div class="bg-white rounded-lg p-4">
                                             <p class="text-sm text-gray-600 mb-1">رسوم إدارية</p>
-                                            <p class="text-xl font-bold text-gray-800">\${bestOffer.admin_fee}%</p>
+                                            <p class="text-xl font-bold text-gray-800">${bestOffer.admin_fee}%</p>
                                             <p class="text-xs text-gray-500">من المبلغ</p>
                                         </div>
                                         <div class="bg-white rounded-lg p-4">
                                             <p class="text-sm text-gray-600 mb-1">إجمالي المبلغ</p>
-                                            <p class="text-xl font-bold text-gray-800">\${bestOffer.total_amount.toLocaleString('ar-SA', {maximumFractionDigits: 0})}</p>
+                                            <p class="text-xl font-bold text-gray-800">${bestOffer.total_amount.toLocaleString('ar-SA', {maximumFractionDigits: 0})}</p>
                                             <p class="text-xs text-gray-500">ريال</p>
                                         </div>
                                     </div>
@@ -2295,20 +2429,20 @@
                                     <div class="mt-4 p-4 bg-white rounded-lg">
                                         <div class="flex items-center justify-between mb-2">
                                             <span class="text-gray-700">إجمالي الربح والرسوم:</span>
-                                            <span class="text-xl font-bold text-red-600">\${bestOffer.total_profit.toLocaleString('ar-SA', {maximumFractionDigits: 0})} ريال</span>
+                                            <span class="text-xl font-bold text-red-600">${bestOffer.total_profit.toLocaleString('ar-SA', {maximumFractionDigits: 0})} ريال</span>
                                         </div>
                                         <div class="flex items-center justify-between">
                                             <span class="text-gray-700">الحالة:</span>
-                                            <span class="px-3 py-1 rounded-full text-sm font-bold \${bestOffer.is_affordable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-                                                \${bestOffer.is_affordable ? '✓ مناسب للعميل' : '✗ يتجاوز القدرة الشرائية'}
+                                            <span class="px-3 py-1 rounded-full text-sm font-bold ${bestOffer.is_affordable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                                                ${bestOffer.is_affordable ? '✓ مناسب للعميل' : '✗ يتجاوز القدرة الشرائية'}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-                                \` : '<div class="text-center text-gray-500 py-8">لا توجد عروض متاحة</div>'}
+                                ` : '<div class="text-center text-gray-500 py-8">لا توجد عروض متاحة</div>'}
                                 
                                 <!-- All Offers Comparison -->
-                                \${offers.length > 1 ? \`
+                                ${offers.length > 1 ? `
                                 <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                                     <div class="bg-gray-100 px-6 py-4 border-b">
                                         <h3 class="text-xl font-bold text-gray-800">
@@ -2329,27 +2463,27 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                \${offers.map((offer, idx) => \`
-                                                    <tr class="border-t hover:bg-gray-50 \${offer.bank_id === bestOffer?.bank_id ? 'bg-yellow-50' : ''}">
-                                                        <td class="px-4 py-3 font-medium \${offer.bank_id === bestOffer?.bank_id ? 'text-yellow-700' : ''}">
-                                                            \${offer.bank_id === bestOffer?.bank_id ? '🏆 ' : ''}\${offer.bank_name}
+                                                ${offers.map((offer, idx) => `
+                                                    <tr class="border-t hover:bg-gray-50 ${offer.bank_id === bestOffer?.bank_id ? 'bg-yellow-50' : ''}">
+                                                        <td class="px-4 py-3 font-medium ${offer.bank_id === bestOffer?.bank_id ? 'text-yellow-700' : ''}">
+                                                            ${offer.bank_id === bestOffer?.bank_id ? '🏆 ' : ''}${offer.bank_name}
                                                         </td>
-                                                        <td class="px-4 py-3 font-bold">\${offer.monthly_payment.toLocaleString('ar-SA', {maximumFractionDigits: 2})} ريال</td>
-                                                        <td class="px-4 py-3">\${offer.profit_rate}%</td>
-                                                        <td class="px-4 py-3">\${offer.admin_fee}%</td>
-                                                        <td class="px-4 py-3 font-medium">\${offer.total_amount.toLocaleString('ar-SA', {maximumFractionDigits: 0})} ريال</td>
+                                                        <td class="px-4 py-3 font-bold">${offer.monthly_payment.toLocaleString('ar-SA', {maximumFractionDigits: 2})} ريال</td>
+                                                        <td class="px-4 py-3">${offer.profit_rate}%</td>
+                                                        <td class="px-4 py-3">${offer.admin_fee}%</td>
+                                                        <td class="px-4 py-3 font-medium">${offer.total_amount.toLocaleString('ar-SA', {maximumFractionDigits: 0})} ريال</td>
                                                         <td class="px-4 py-3 text-center">
-                                                            <span class="px-2 py-1 rounded-full text-xs font-bold \${offer.is_affordable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-                                                                \${offer.is_affordable ? '✓ مناسب' : '✗ غير مناسب'}
+                                                            <span class="px-2 py-1 rounded-full text-xs font-bold ${offer.is_affordable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                                                                ${offer.is_affordable ? '✓ مناسب' : '✗ غير مناسب'}
                                                             </span>
                                                         </td>
                                                     </tr>
-                                                \`).join('')}
+                                                `).join('')}
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
-                                \` : ''}
+                                ` : ''}
                                 
                                 <!-- Action Buttons -->
                                 <div class="flex justify-end gap-3 mt-6">
@@ -2365,7 +2499,7 @@
                             </div>
                         </div>
                     </div>
-                \`;
+                `;
                 
                 document.body.insertAdjacentHTML('beforeend', modalContent);
                 
@@ -2385,7 +2519,7 @@
             }
             
             try {
-                const response = await axios.delete(\`/api/customers/\${id}\`);
+                const response = await axios.delete(`/api/customers/${id}`);
                 if (response.data.success) {
                     alert('✅ ' + response.data.message);
                     loadCustomers();
@@ -2415,78 +2549,78 @@
                             'rejected': 'مرفوض'
                         };
                         
-                        const detailsHtml = \`
+                        const detailsHtml = `
                             <div class="bg-gray-50 rounded-lg p-4">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <p class="text-sm text-gray-600">رقم الطلب</p>
-                                        <p class="font-bold text-lg">#\${request.id}</p>
+                                        <p class="font-bold text-lg">#${request.id}</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">الحالة</p>
-                                        <span class="\${statusColors[request.status]} px-3 py-1 rounded text-sm font-bold inline-block mt-1">
-                                            \${statusText[request.status]}
+                                        <span class="${statusColors[request.status]} px-3 py-1 rounded text-sm font-bold inline-block mt-1">
+                                            ${statusText[request.status]}
                                         </span>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">اسم العميل</p>
-                                        <p class="font-medium">\${request.customer_name}</p>
+                                        <p class="font-medium">${request.customer_name}</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">رقم الجوال</p>
-                                        <p class="font-medium">\${request.customer_phone}</p>
+                                        <p class="font-medium">${request.customer_phone}</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">رقم الهوية</p>
-                                        <p class="font-medium">\${request.national_id || '-'}</p>
+                                        <p class="font-medium">${request.national_id || '-'}</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">جهة العمل</p>
-                                        <p class="font-medium">\${request.employer_name || '-'}</p>
+                                        <p class="font-medium">${request.employer_name || '-'}</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">المسمى الوظيفي</p>
-                                        <p class="font-medium">\${request.job_title || '-'}</p>
+                                        <p class="font-medium">${request.job_title || '-'}</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">البنك المختار</p>
-                                        <p class="font-medium">\${request.selected_bank_name || '-'}</p>
+                                        <p class="font-medium">${request.selected_bank_name || '-'}</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">نوع التمويل</p>
-                                        <p class="font-medium">\${request.financing_type_name || '-'}</p>
+                                        <p class="font-medium">${request.financing_type_name || '-'}</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">المبلغ المطلوب</p>
-                                        <p class="font-bold text-green-600 text-lg">\${Number(request.requested_amount).toLocaleString('ar-SA')} ريال</p>
+                                        <p class="font-bold text-green-600 text-lg">${Number(request.requested_amount).toLocaleString('ar-SA')} ريال</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">مدة التمويل</p>
-                                        <p class="font-medium">\${request.duration_months} شهر</p>
+                                        <p class="font-medium">${request.duration_months} شهر</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">الراتب عند الطلب</p>
-                                        <p class="font-medium">\${Number(request.salary_at_request).toLocaleString('ar-SA')} ريال</p>
+                                        <p class="font-medium">${Number(request.salary_at_request).toLocaleString('ar-SA')} ريال</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">الالتزامات الشهرية</p>
-                                        <p class="font-medium">\${Number(request.monthly_obligations || 0).toLocaleString('ar-SA')} ريال</p>
+                                        <p class="font-medium">${Number(request.monthly_obligations || 0).toLocaleString('ar-SA')} ريال</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">القسط الشهري</p>
-                                        <p class="font-medium">\${Number(request.monthly_payment || 0).toLocaleString('ar-SA')} ريال</p>
+                                        <p class="font-medium">${Number(request.monthly_payment || 0).toLocaleString('ar-SA')} ريال</p>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">تاريخ الطلب</p>
-                                        <p class="font-medium">\${new Date(request.created_at).toLocaleDateString('ar-SA')}</p>
+                                        <p class="font-medium">${new Date(request.created_at).toLocaleDateString('ar-SA')}</p>
                                     </div>
                                 </div>
-                                \${request.notes ? \`
+                                ${request.notes ? `
                                     <div class="mt-4 pt-4 border-t">
                                         <p class="text-sm text-gray-600 mb-2">ملاحظات</p>
-                                        <p class="text-gray-800">\${request.notes}</p>
+                                        <p class="text-gray-800">${request.notes}</p>
                                     </div>
-                                \` : ''}
+                                ` : ''}
                                 
                                 <!-- Attachments Section -->
                                 <div class="mt-4 pt-4 border-t">
@@ -2495,45 +2629,45 @@
                                         المرفقات
                                     </p>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        \${(request.id_attachment_url && request.id_attachment_url !== 'null') ? \`
-                                            <a href="\${request.id_attachment_url}" target="_blank" 
+                                        ${(request.id_attachment_url && request.id_attachment_url !== 'null') ? `
+                                            <a href="${request.id_attachment_url}" target="_blank" 
                                                class="flex items-center gap-2 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors">
                                                 <i class="fas fa-id-card text-blue-600"></i>
                                                 <span class="text-sm text-blue-800 font-medium">صورة الهوية</span>
                                                 <i class="fas fa-download text-blue-600 mr-auto"></i>
                                             </a>
-                                        \` : '<div class="p-3 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-500">صورة الهوية: غير مرفقة</div>'}
+                                        ` : '<div class="p-3 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-500">صورة الهوية: غير مرفقة</div>'}
                                         
-                                        \${(request.bank_statement_attachment_url && request.bank_statement_attachment_url !== 'null') ? \`
-                                            <a href="\${request.bank_statement_attachment_url}" target="_blank"
+                                        ${(request.bank_statement_attachment_url && request.bank_statement_attachment_url !== 'null') ? `
+                                            <a href="${request.bank_statement_attachment_url}" target="_blank"
                                                class="flex items-center gap-2 p-3 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 transition-colors">
                                                 <i class="fas fa-university text-green-600"></i>
                                                 <span class="text-sm text-green-800 font-medium">كشف الحساب البنكي</span>
                                                 <i class="fas fa-download text-green-600 mr-auto"></i>
                                             </a>
-                                        \` : '<div class="p-3 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-500">كشف الحساب: غير مرفق</div>'}
+                                        ` : '<div class="p-3 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-500">كشف الحساب: غير مرفق</div>'}
                                         
-                                        \${(request.salary_attachment_url && request.salary_attachment_url !== 'null') ? \`
-                                            <a href="\${request.salary_attachment_url}" target="_blank"
+                                        ${(request.salary_attachment_url && request.salary_attachment_url !== 'null') ? `
+                                            <a href="${request.salary_attachment_url}" target="_blank"
                                                class="flex items-center gap-2 p-3 bg-yellow-50 hover:bg-yellow-100 rounded-lg border border-yellow-200 transition-colors">
                                                 <i class="fas fa-file-invoice-dollar text-yellow-600"></i>
                                                 <span class="text-sm text-yellow-800 font-medium">تعريف الراتب</span>
                                                 <i class="fas fa-download text-yellow-600 mr-auto"></i>
                                             </a>
-                                        \` : '<div class="p-3 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-500">تعريف الراتب: غير مرفق</div>'}
+                                        ` : '<div class="p-3 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-500">تعريف الراتب: غير مرفق</div>'}
                                         
-                                        \${(request.additional_attachment_url && request.additional_attachment_url !== 'null') ? \`
-                                            <a href="\${request.additional_attachment_url}" target="_blank"
+                                        ${(request.additional_attachment_url && request.additional_attachment_url !== 'null') ? `
+                                            <a href="${request.additional_attachment_url}" target="_blank"
                                                class="flex items-center gap-2 p-3 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors">
                                                 <i class="fas fa-file text-purple-600"></i>
                                                 <span class="text-sm text-purple-800 font-medium">مرفقات إضافية</span>
                                                 <i class="fas fa-download text-purple-600 mr-auto"></i>
                                             </a>
-                                        \` : '<div class="p-3 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-500">مرفقات إضافية: غير مرفقة</div>'}
+                                        ` : '<div class="p-3 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-500">مرفقات إضافية: غير مرفقة</div>'}
                                     </div>
                                 </div>
                             </div>
-                        \`;
+                        `;
                         
                         document.getElementById('requestDetails').innerHTML = detailsHtml;
                         openModal('viewRequestModal');
@@ -2551,7 +2685,7 @@
             }
             
             try {
-                const response = await axios.delete(\`/api/financing-requests/\${id}\`);
+                const response = await axios.delete(`/api/financing-requests/${id}`);
                 if (response.data.success) {
                     alert('✅ ' + response.data.message);
                     loadFinancingRequests();
@@ -2598,32 +2732,77 @@
                         return;
                     }
                     
-                    tbody.innerHTML = banks.map((bank, index) => \`
+                    tbody.innerHTML = banks.map((bank, index) => `
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="px-4 py-3">\${index + 1}</td>
-                            <td class="px-4 py-3 font-medium">\${bank.bank_name}</td>
-                            <td class="px-4 py-3">\${bank.bank_code || '-'}</td>
+                            <td class="px-4 py-3">${index + 1}</td>
+                            <td class="px-4 py-3 font-medium">${bank.bank_name}</td>
+                            <td class="px-4 py-3">${bank.bank_code || '-'}</td>
                             <td class="px-4 py-3">
-                                <span class="\${bank.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2 py-1 rounded text-xs">
-                                    \${bank.is_active ? 'نشط' : 'غير نشط'}
+                                <span class="${bank.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2 py-1 rounded text-xs">
+                                    ${bank.is_active ? 'نشط' : 'غير نشط'}
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <button onclick="viewBank(\${bank.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
+                                <button onclick="viewBank(${bank.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button onclick="editBank(\${bank.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
+                                <button onclick="editBank(${bank.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button onclick="deleteBank(\${bank.id})" class="text-red-600 hover:text-red-800" title="حذف">
+                                <button onclick="deleteBank(${bank.id})" class="text-red-600 hover:text-red-800" title="حذف">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
-                    \`).join('');
+                    `).join('');
                 }
             } catch (error) {
                 console.error('Error loading banks:', error);
+            }
+        }
+        
+        // Load Financing Types
+        async function loadFinancingTypes() {
+            try {
+                const response = await axios.get('/api/financing-types');
+                console.log('📦 Financing Types Response:', response.data);
+                if (response.data.success) {
+                    const types = response.data.data;
+                    const tbody = document.getElementById('financingTypesTable');
+                    
+                    if (types.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500">لا توجد أنواع تمويل. اضغط على "إضافة نوع تمويل جديد" لإضافة نوع جديد.</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = types.map((type, index) => `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="px-4 py-3">${index + 1}</td>
+                            <td class="px-4 py-3 font-medium">${type.type_name || type.name || '-'}</td>
+                            <td class="px-4 py-3">
+                                <span class="${type.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2 py-1 rounded text-xs">
+                                    ${type.is_active ? 'نشط' : 'غير نشط'}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <button onclick="editFinancingType(${type.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteFinancingType(${type.id})" class="text-red-600 hover:text-red-800" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    console.error('❌ API returned error:', response.data);
+                    const tbody = document.getElementById('financingTypesTable');
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-red-500">خطأ في تحميل البيانات: ' + (response.data.error || 'خطأ غير معروف') + '</td></tr>';
+                }
+            } catch (error) {
+                console.error('❌ Error loading financing types:', error);
+                const tbody = document.getElementById('financingTypesTable');
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-red-500">خطأ في تحميل البيانات</td></tr>';
             }
         }
         
@@ -2640,32 +2819,32 @@
                         return;
                     }
                     
-                    tbody.innerHTML = rates.map((rate, index) => \`
+                    tbody.innerHTML = rates.map((rate, index) => `
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="px-4 py-3">\${index + 1}</td>
-                            <td class="px-4 py-3 font-medium">\${rate.bank_name || '-'}</td>
-                            <td class="px-4 py-3">\${rate.financing_type_name || '-'}</td>
-                            <td class="px-4 py-3 font-bold text-green-600">\${rate.rate}%</td>
-                            <td class="px-4 py-3 text-sm">\${rate.min_amount.toLocaleString('ar-SA')} - \${rate.max_amount.toLocaleString('ar-SA')}</td>
-                            <td class="px-4 py-3 text-sm">\${rate.min_salary.toLocaleString('ar-SA')} - \${rate.max_salary.toLocaleString('ar-SA')}</td>
+                            <td class="px-4 py-3">${index + 1}</td>
+                            <td class="px-4 py-3 font-medium">${rate.bank_name || '-'}</td>
+                            <td class="px-4 py-3">${rate.financing_type_name || '-'}</td>
+                            <td class="px-4 py-3 font-bold text-green-600">${rate.rate}%</td>
+                            <td class="px-4 py-3 text-sm">${rate.min_amount.toLocaleString('ar-SA')} - ${rate.max_amount.toLocaleString('ar-SA')}</td>
+                            <td class="px-4 py-3 text-sm">${rate.min_salary.toLocaleString('ar-SA')} - ${rate.max_salary.toLocaleString('ar-SA')}</td>
                             <td class="px-4 py-3">
-                                <span class="\${rate.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2 py-1 rounded text-xs">
-                                    \${rate.is_active ? 'نشط' : 'غير نشط'}
+                                <span class="${rate.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2 py-1 rounded text-xs">
+                                    ${rate.is_active ? 'نشط' : 'غير نشط'}
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <button onclick="viewRate(\${rate.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
+                                <button onclick="viewRate(${rate.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button onclick="editRate(\${rate.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
+                                <button onclick="editRate(${rate.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button onclick="deleteRate(\${rate.id})" class="text-red-600 hover:text-red-800" title="حذف">
+                                <button onclick="deleteRate(${rate.id})" class="text-red-600 hover:text-red-800" title="حذف">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
-                    \`).join('');
+                    `).join('');
                 }
             } catch (error) {
                 console.error('Error loading rates:', error);
@@ -2691,7 +2870,7 @@
             }
             
             try {
-                const response = await axios.delete(\`/api/banks/\${id}\`);
+                const response = await axios.delete(`/api/banks/${id}`);
                 if (response.data.success) {
                     alert('✅ ' + response.data.message);
                     loadBanks();
@@ -2700,6 +2879,31 @@
                 }
             } catch (error) {
                 console.error('Error deleting bank:', error);
+                alert('❌ حدث خطأ أثناء الحذف');
+            }
+        }
+        
+        // Financing Types actions
+        window.addFinancingType = function() {
+            openModal('addFinancingTypeModal');
+        }
+        
+        window.editFinancingType = function(id) {
+            alert('تعديل نوع التمويل رقم: ' + id + ' (قريباً)');
+        }
+        
+        window.deleteFinancingType = async function(id) {
+            if (!confirm('هل أنت متأكد من حذف نوع التمويل هذا؟')) return;
+            try {
+                const response = await axios.delete(`/api/financing-types/${id}`);
+                if (response.data.success) {
+                    alert('✅ تم الحذف بنجاح');
+                    loadFinancingTypes();
+                } else {
+                    alert('❌ خطأ: ' + response.data.error);
+                }
+            } catch (error) {
+                console.error('Error deleting financing type:', error);
                 alert('❌ حدث خطأ أثناء الحذف');
             }
         }
@@ -2713,21 +2917,26 @@
                     axios.get('/api/financing-types')
                 ]);
                 
+                console.log('📦 Rate Modal Data:', { banks: banksRes.data, types: typesRes.data });
+                
                 if (banksRes.data.success && typesRes.data.success) {
                     const bankSelect = document.getElementById('rateBankSelect');
                     const typeSelect = document.getElementById('rateFinancingTypeSelect');
                     
                     bankSelect.innerHTML = '<option value="">اختر البنك</option>' +
-                        banksRes.data.data.map(b => \`<option value="\${b.id}">\${b.bank_name}</option>\`).join('');
+                        banksRes.data.data.map(b => `<option value="${b.id}">${b.bank_name || b.name}</option>`).join('');
                     
                     typeSelect.innerHTML = '<option value="">اختر نوع التمويل</option>' +
-                        typesRes.data.data.map(t => \`<option value="\${t.id}">\${t.type_name}</option>\`).join('');
+                        typesRes.data.data.map(t => `<option value="${t.id}">${t.type_name || t.name}</option>`).join('');
                     
                     openModal('addRateModal');
+                } else {
+                    console.error('❌ Failed to load data:', { banks: banksRes.data, types: typesRes.data });
+                    alert('❌ حدث خطأ أثناء تحميل البيانات');
                 }
             } catch (error) {
-                console.error('Error loading data:', error);
-                alert('❌ حدث خطأ أثناء تحميل البيانات');
+                console.error('❌ Error loading data:', error);
+                alert('❌ حدث خطأ أثناء تحميل البيانات: ' + error.message);
             }
         }
         
@@ -2745,7 +2954,7 @@
             }
             
             try {
-                const response = await axios.delete(\`/api/rates/\${id}\`);
+                const response = await axios.delete(`/api/rates/${id}`);
                 if (response.data.success) {
                     alert('✅ ' + response.data.message);
                     loadRates();
@@ -2771,43 +2980,43 @@
                         return;
                     }
                     
-                    tbody.innerHTML = users.map((user, index) => \`
+                    tbody.innerHTML = users.map((user, index) => `
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="px-4 py-3">\${index + 1}</td>
-                            <td class="px-4 py-3 font-medium">\${user.full_name}</td>
-                            <td class="px-4 py-3">\${user.email}</td>
-                            <td class="px-4 py-3">\${user.username}</td>
+                            <td class="px-4 py-3">${index + 1}</td>
+                            <td class="px-4 py-3 font-medium">${user.full_name}</td>
+                            <td class="px-4 py-3">${user.email}</td>
+                            <td class="px-4 py-3">${user.username}</td>
                             <td class="px-4 py-3">
                                 <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
-                                    \${user.role_name || '-'}
+                                    ${user.role_name || '-'}
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <button onclick="managePermissions(\${user.id}, '\${user.full_name}', \${user.role_id})" 
+                                <button onclick="managePermissions(${user.id}, '${user.full_name}', ${user.role_id})" 
                                         class="bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1 rounded text-xs font-medium" 
                                         title="إدارة الصلاحيات">
                                     <i class="fas fa-shield-alt ml-1"></i>
-                                    \${user.permissions_count || 0} صلاحية
+                                    ${user.permissions_count || 0} صلاحية
                                 </button>
                             </td>
                             <td class="px-4 py-3">
-                                <span class="\${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2 py-1 rounded text-xs">
-                                    \${user.is_active ? 'نشط' : 'غير نشط'}
+                                <span class="${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2 py-1 rounded text-xs">
+                                    ${user.is_active ? 'نشط' : 'غير نشط'}
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <button onclick="viewUser(\${user.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
+                                <button onclick="viewUser(${user.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button onclick="editUser(\${user.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
+                                <button onclick="editUser(${user.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button onclick="deleteUser(\${user.id})" class="text-red-600 hover:text-red-800" title="حذف">
+                                <button onclick="deleteUser(${user.id})" class="text-red-600 hover:text-red-800" title="حذف">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
-                    \`).join('');
+                    `).join('');
                 }
             } catch (error) {
                 console.error('Error loading users:', error);
@@ -2823,7 +3032,7 @@
                 // Load all permissions grouped by category
                 const permissionsRes = await axios.get('/api/permissions/by-category');
                 // Load user's current permissions
-                const userPermRes = await axios.get(\`/api/roles/\${roleId}/permissions\`);
+                const userPermRes = await axios.get(`/api/roles/${roleId}/permissions`);
                 
                 if (permissionsRes.data.success && userPermRes.data.success) {
                     const allPermissions = permissionsRes.data.data;
@@ -2844,25 +3053,25 @@
                     
                     const content = Object.keys(allPermissions).map(category => {
                         const permissions = allPermissions[category];
-                        return \`
+                        return `
                             <div class="bg-gray-50 rounded-lg p-4">
                                 <h3 class="font-bold text-lg mb-3 text-gray-800">
                                     <i class="fas fa-folder ml-2"></i>
-                                    \${categoryNames[category] || category}
+                                    ${categoryNames[category] || category}
                                 </h3>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    \${permissions.map(perm => \`
+                                    ${permissions.map(perm => `
                                         <label class="flex items-center space-x-reverse space-x-2 p-2 hover:bg-white rounded cursor-pointer">
                                             <input type="checkbox" 
                                                    class="permission-checkbox rounded text-purple-600 focus:ring-purple-500" 
-                                                   value="\${perm.id}"
-                                                   \${userPermissions.includes(perm.id) ? 'checked' : ''}>
-                                            <span class="text-sm text-gray-700">\${perm.permission_name}</span>
+                                                   value="${perm.id}"
+                                                   ${userPermissions.includes(perm.id) ? 'checked' : ''}>
+                                            <span class="text-sm text-gray-700">${perm.permission_name}</span>
                                         </label>
-                                    \`).join('')}
+                                    `).join('')}
                                 </div>
                             </div>
-                        \`;
+                        `;
                     }).join('');
                     
                     document.getElementById('permissionsContent').innerHTML = content;
@@ -2881,7 +3090,7 @@
             const permissionIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
             
             try {
-                const response = await axios.put(\`/api/roles/\${roleId}/permissions\`, {
+                const response = await axios.put(`/api/roles/${roleId}/permissions`, {
                     permission_ids: permissionIds
                 });
                 
@@ -2950,31 +3159,31 @@
                             'cancelled': 'ملغي'
                         };
                         
-                        return \`
+                        return `
                             <tr class="border-b hover:bg-gray-50">
-                                <td class="px-4 py-3">\${index + 1}</td>
-                                <td class="px-4 py-3 font-medium">\${sub.company_name}</td>
-                                <td class="px-4 py-3">\${sub.package_name || '-'}</td>
-                                <td class="px-4 py-3">\${sub.start_date}</td>
-                                <td class="px-4 py-3">\${sub.end_date}</td>
+                                <td class="px-4 py-3">${index + 1}</td>
+                                <td class="px-4 py-3 font-medium">${sub.company_name}</td>
+                                <td class="px-4 py-3">${sub.package_name || '-'}</td>
+                                <td class="px-4 py-3">${sub.start_date}</td>
+                                <td class="px-4 py-3">${sub.end_date}</td>
                                 <td class="px-4 py-3">
-                                    <span class="\${statusColors[sub.status]} px-2 py-1 rounded text-xs">
-                                        \${statusText[sub.status] || sub.status}
+                                    <span class="${statusColors[sub.status]} px-2 py-1 rounded text-xs">
+                                        ${statusText[sub.status] || sub.status}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <button onclick="viewSubscription(\${sub.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
+                                    <button onclick="viewSubscription(${sub.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="editSubscription(\${sub.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
+                                    <button onclick="editSubscription(${sub.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="deleteSubscription(\${sub.id})" class="text-red-600 hover:text-red-800" title="حذف">
+                                    <button onclick="deleteSubscription(${sub.id})" class="text-red-600 hover:text-red-800" title="حذف">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>
-                        \`;
+                        `;
                     }).join('');
                 }
             } catch (error) {
@@ -2995,31 +3204,31 @@
                         return;
                     }
                     
-                    tbody.innerHTML = packages.map((pkg, index) => \`
+                    tbody.innerHTML = packages.map((pkg, index) => `
                         <tr class="border-b hover:bg-gray-50">
-                            <td class="px-4 py-3">\${index + 1}</td>
-                            <td class="px-4 py-3 font-medium">\${pkg.package_name}</td>
-                            <td class="px-4 py-3 font-bold text-green-600">\${pkg.price.toLocaleString('ar-SA')} ريال</td>
-                            <td class="px-4 py-3">\${pkg.duration_months} شهر</td>
-                            <td class="px-4 py-3">\${pkg.max_calculations || 'غير محدود'}</td>
+                            <td class="px-4 py-3">${index + 1}</td>
+                            <td class="px-4 py-3 font-medium">${pkg.package_name}</td>
+                            <td class="px-4 py-3 font-bold text-green-600">${pkg.price.toLocaleString('ar-SA')} ريال</td>
+                            <td class="px-4 py-3">${pkg.duration_months} شهر</td>
+                            <td class="px-4 py-3">${pkg.max_calculations || 'غير محدود'}</td>
                             <td class="px-4 py-3">
-                                <span class="\${pkg.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2 py-1 rounded text-xs">
-                                    \${pkg.is_active ? 'نشط' : 'غير نشط'}
+                                <span class="${pkg.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} px-2 py-1 rounded text-xs">
+                                    ${pkg.is_active ? 'نشط' : 'غير نشط'}
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <button onclick="viewPackage(\${pkg.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
+                                <button onclick="viewPackage(${pkg.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button onclick="editPackage(\${pkg.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
+                                <button onclick="editPackage(${pkg.id})" class="text-green-600 hover:text-green-800 ml-2" title="تعديل">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button onclick="deletePackage(\${pkg.id})" class="text-red-600 hover:text-red-800" title="حذف">
+                                <button onclick="deletePackage(${pkg.id})" class="text-red-600 hover:text-red-800" title="حذف">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
-                    \`).join('');
+                    `).join('');
                 }
             } catch (error) {
                 console.error('Error loading packages:', error);
@@ -3033,7 +3242,7 @@
         window.deleteUser = async function(id) {
             if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) return;
             try {
-                const response = await axios.delete(\`/api/users/\${id}\`);
+                const response = await axios.delete(`/api/users/${id}`);
                 if (response.data.success) {
                     alert('✅ ' + response.data.message);
                     loadUsers();
@@ -3053,7 +3262,7 @@
         window.deleteSubscription = async function(id) {
             if (!confirm('هل أنت متأكد من حذف هذا الاشتراك؟')) return;
             try {
-                const response = await axios.delete(\`/api/subscriptions/\${id}\`);
+                const response = await axios.delete(`/api/subscriptions/${id}`);
                 if (response.data.success) {
                     alert('✅ ' + response.data.message);
                     loadSubscriptions();
@@ -3075,7 +3284,7 @@
         window.deletePackage = async function(id) {
             if (!confirm('هل أنت متأكد من حذف هذه الباقة؟')) return;
             try {
-                const response = await axios.delete(\`/api/packages/\${id}\`);
+                const response = await axios.delete(`/api/packages/${id}`);
                 if (response.data.success) {
                     alert('✅ ' + response.data.message);
                     loadPackages();
@@ -3113,32 +3322,32 @@
                             'rejected': 'مرفوض'
                         };
                         
-                        return \`
+                        return `
                             <tr class="border-b hover:bg-gray-50">
-                                <td class="px-4 py-3">\${index + 1}</td>
-                                <td class="px-4 py-3 font-medium">\${req.company_name}</td>
-                                <td class="px-4 py-3">\${req.contact_name}</td>
-                                <td class="px-4 py-3">\${req.email}</td>
-                                <td class="px-4 py-3">\${req.phone}</td>
-                                <td class="px-4 py-3">\${req.package_name || '-'}</td>
+                                <td class="px-4 py-3">${index + 1}</td>
+                                <td class="px-4 py-3 font-medium">${req.company_name}</td>
+                                <td class="px-4 py-3">${req.contact_name}</td>
+                                <td class="px-4 py-3">${req.email}</td>
+                                <td class="px-4 py-3">${req.phone}</td>
+                                <td class="px-4 py-3">${req.package_name || '-'}</td>
                                 <td class="px-4 py-3">
-                                    <span class="\${statusColors[req.status]} px-2 py-1 rounded text-xs">
-                                        \${statusText[req.status] || req.status}
+                                    <span class="${statusColors[req.status]} px-2 py-1 rounded text-xs">
+                                        ${statusText[req.status] || req.status}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <button onclick="viewSubscriptionRequest(\${req.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
+                                    <button onclick="viewSubscriptionRequest(${req.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="عرض">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="updateSubscriptionRequestStatus(\${req.id})" class="text-green-600 hover:text-green-800 ml-2" title="تحديث الحالة">
+                                    <button onclick="updateSubscriptionRequestStatus(${req.id})" class="text-green-600 hover:text-green-800 ml-2" title="تحديث الحالة">
                                         <i class="fas fa-check-circle"></i>
                                     </button>
-                                    <button onclick="deleteSubscriptionRequest(\${req.id})" class="text-red-600 hover:text-red-800" title="حذف">
+                                    <button onclick="deleteSubscriptionRequest(${req.id})" class="text-red-600 hover:text-red-800" title="حذف">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>
-                        \`;
+                        `;
                     }).join('');
                 }
             } catch (error) {
@@ -3152,7 +3361,7 @@
         window.deleteSubscriptionRequest = async function(id) {
             if (!confirm('هل أنت متأكد من حذف طلب الاشتراك هذا؟')) return;
             try {
-                const response = await axios.delete(\`/api/subscription-requests/\${id}\`);
+                const response = await axios.delete(`/api/subscription-requests/${id}`);
                 if (response.data.success) {
                     alert('✅ ' + response.data.message);
                     loadSubscriptionRequests();
@@ -3297,7 +3506,7 @@
                     const notes = formData.get('notes');
                     
                     try {
-                        const response = await axios.put(\`/api/financing-requests/\${requestId}/status\`, {
+                        const response = await axios.put(`/api/financing-requests/${requestId}/status`, {
                             status: status,
                             notes: notes
                         });
@@ -3330,7 +3539,7 @@
                     };
                     
                     try {
-                        const response = await axios.put(\`/api/users/\${userId}\`, data);
+                        const response = await axios.put(`/api/users/${userId}`, data);
                         if (response.data.success) {
                             alert('✅ تم تحديث بيانات المستخدم بنجاح');
                             closeModal('editUserModal');
@@ -3372,7 +3581,7 @@
             
             // Build calculator URL
             const baseUrl = window.location.origin;
-            const calculatorUrl = \`\${baseUrl}/c/\${tenantSlug}/calculator\`;
+            const calculatorUrl = `${baseUrl}/c/${tenantSlug}/calculator`;
             
             console.log('🔗 رابط الحاسبة المولد:', calculatorUrl);
             
@@ -3388,7 +3597,7 @@
                 qrcodeContainer.innerHTML = '';
                 
                 // Create QR code image using API
-                const qrCodeUrl = \`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=\${encodeURIComponent(calculatorUrl)}\`;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(calculatorUrl)}`;
                 
                 const qrImg = document.createElement('img');
                 qrImg.src = qrCodeUrl;
@@ -3467,7 +3676,7 @@
             // Create download link
             const link = document.createElement('a');
             link.href = qrImg.src;
-            link.download = \`calculator-qr-\${tenantName.replace(/\\s+/g, '-')}.png\`;
+            link.download = `calculator-qr-${tenantName.replace(/\\s+/g, '-')}.png`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -3533,7 +3742,7 @@
             
             const link = document.createElement('a');
             link.href = qrImg.src;
-            link.download = \`calculator-qr-\${tenantName.replace(/\\s+/g, '-')}.png\`;
+            link.download = `calculator-qr-${tenantName.replace(/\\s+/g, '-')}.png`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -3554,7 +3763,7 @@
                 }
                 
                 const baseUrl = window.location.origin;
-                const calculatorUrl = \`\${baseUrl}/c/\${tenantSlug}/calculator\`;
+                const calculatorUrl = `${baseUrl}/c/${tenantSlug}/calculator`;
                 
                 console.log('✅ رابط الحاسبة:', calculatorUrl);
                 
@@ -3665,7 +3874,7 @@
                 // Fetch statistics
                 const statsResponse = await axios.get('/api/reports/statistics', {
                     params: { from_date: fromDate, to_date: toDate },
-                    headers: token ? { 'Authorization': \`Bearer \${token}\` } : {}
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
                 
                 if (statsResponse.data.success) {
@@ -3680,14 +3889,14 @@
                     // Load top customers
                     if (stats.top_customers && stats.top_customers.length > 0) {
                         const tbody = document.getElementById('topCustomersTable');
-                        tbody.innerHTML = stats.top_customers.map(customer => \`
+                        tbody.innerHTML = stats.top_customers.map(customer => `
                             <tr class="border-b hover:bg-gray-50">
-                                <td class="px-4 py-3">\${customer.customer_name}</td>
-                                <td class="px-4 py-3">\${customer.request_count}</td>
-                                <td class="px-4 py-3">\${(customer.total_amount || 0).toLocaleString('ar-SA')} ريال</td>
-                                <td class="px-4 py-3">\${customer.last_request_date ? new Date(customer.last_request_date).toLocaleDateString('ar-SA') : '-'}</td>
+                                <td class="px-4 py-3">${customer.customer_name}</td>
+                                <td class="px-4 py-3">${customer.request_count}</td>
+                                <td class="px-4 py-3">${(customer.total_amount || 0).toLocaleString('ar-SA')} ريال</td>
+                                <td class="px-4 py-3">${customer.last_request_date ? new Date(customer.last_request_date).toLocaleDateString('ar-SA') : '-'}</td>
                             </tr>
-                        \`).join('');
+                        `).join('');
                     }
                     
                     console.log('✅ Reports loaded successfully');
