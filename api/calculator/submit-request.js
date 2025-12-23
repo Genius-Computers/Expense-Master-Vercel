@@ -89,7 +89,7 @@ export default async function handler(req, res) {
         bank_id, selected_bank_id,
         amount, requested_amount,
         duration, duration_months,
-        monthly_obligations, monthly_payment,
+        salary_at_request, monthly_obligations, monthly_payment,
         status, notes
       )
       VALUES (
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
         ${bank_id || null}, ${bank_id || null},
         ${requested_amount || null}, ${requested_amount || null},
         ${duration || null}, ${duration || null},
-        ${monthly_obligations || 0}, ${monthly_payment || null},
+        ${monthly_salary || null}, ${monthly_obligations || 0}, ${monthly_payment || null},
         'pending', ${notes || null}
       )
       RETURNING id

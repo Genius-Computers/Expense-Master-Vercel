@@ -795,10 +795,13 @@
                                 </div>
                             `;
                             
-                            const formData = new FormData();
-                            formData.append('file', attachment.file);
-                            formData.append('request_id', requestId);
-                            formData.append('attachment_type', attachment.type);
+                            // Convert file to base64 (avoid multipart parsing on serverless)
+                            const fileToBase64 = (file) => new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve(reader.result);
+                                reader.onerror = () => reject(reader.error);
+                                reader.readAsDataURL(file);
+                            });
                             
                             console.log('📤 Uploading attachment:', { 
                                 requestId, 
@@ -813,10 +816,15 @@
                                 
                                 progressBar.style.width = '30%';
                                 
-                                await axios.post('/api/attachments/upload', formData, {
-                                    headers: {
-                                        'Content-Type': 'multipart/form-data'
-                                    }
+                                const dataUrl = await fileToBase64(attachment.file);
+                                const base64 = String(dataUrl).split(',')[1] || '';
+                                
+                                await axios.post('/api/attachments/upload', {
+                                    request_id: requestId,
+                                    attachment_type: attachment.type,
+                                    filename: attachment.file.name,
+                                    content_type: attachment.file.type,
+                                    data_base64: base64
                                 });
                                 
                                 progressBar.style.width = '100%';
