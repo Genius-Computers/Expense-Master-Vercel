@@ -119,7 +119,9 @@
                 if (data.success) {
                     // Save token and user data
                     localStorage.setItem('token', data.token);
+                    localStorage.setItem('authToken', data.token); // admin panel uses this key
                     localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('userData', JSON.stringify(data.user)); // admin panel also checks this key
                     
                     // Redirect based on role
                     if (data.user.role === 'superadmin') {
